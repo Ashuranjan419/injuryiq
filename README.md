@@ -376,7 +376,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👥 Authors
 
-- Your Name - Initial work
+- Ashutosh Ranjan - Initial work
 
 ## 🙏 Acknowledgments
 
@@ -390,4 +390,4 @@ For questions or support, please open an issue on GitHub.
 
 ---
 
-**Made with ❤️ for Football and Data Science**
+**Made with ❤️ for Football**
