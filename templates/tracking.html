@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Tracking - InjuryIQ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="{{ url_for('index') }}">🧠 InjuryIQ</a>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('index') }}">🏠 Home</a></li>
+                <li><a href="{{ url_for('predict_page') }}">🎯 Predict</a></li>
+                <li><a href="{{ url_for('dashboard') }}">📊 Dashboard</a></li>
+                <li><a href="{{ url_for('tracking') }}" class="active">📋 Tracking</a></li>
+                <li><a href="{{ url_for('logout') }}">🚪 Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Tracking Section -->
+    <section class="tracking-section">
+        <div class="bg-shape bg-shape-1"></div>
+        <div class="bg-shape bg-shape-2"></div>
+        <div class="container">
+            <div class="section-header">
+                <h1>📋 Player Recovery Tracking</h1>
+                <p>Monitor your players' injury recovery progress and countdown to return</p>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="tracking-controls">
+                <div class="filter-group">
+                    <label for="statusFilter">
+                        <span class="label-icon">🔍</span>
+                        Filter by Status
+                    </label>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="all">All Players</option>
+                        <option value="active">Active Recovery</option>
+                        <option value="almost">Almost Ready</option>
+                        <option value="completed">Recovery Complete</option>
+                        <option value="recovered">Marked Recovered</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="sortBy">
+                        <span class="label-icon">⚡</span>
+                        Sort By
+                    </label>
+                    <select id="sortBy" class="filter-select">
+                        <option value="days_asc">Days Remaining (Ascending)</option>
+                        <option value="days_desc">Days Remaining (Descending)</option>
+                        <option value="recent">Most Recent</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading-indicator">
+                <div class="spinner"></div>
+                <p>Loading tracked players...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-icon">📭</div>
+                <h2>No Players Tracked Yet</h2>
+                <p>Start tracking players by making predictions and saving them to your tracking list.</p>
+                <a href="{{ url_for('predict_page') }}" class="btn btn-primary">
+                    🎯 Make a Prediction
+                </a>
+            </div>
+
+            <!-- Players Grid -->
+            <div id="playersGrid" class="tracking-grid" style="display: none;"></div>
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tracking.js') }}"></script>
+</body>
+</html>

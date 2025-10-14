@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: injuryiq
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.5
+      - key: FLASK_DEBUG
+        value: False
+      - key: SECRET_KEY
+        sync: false
+      - key: MONGO_URI
+        sync: false
