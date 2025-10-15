@@ -16,15 +16,15 @@
                 <h1>🧠 InjuryIQ</h1>
             </div>
             <ul class="nav-menu">
-                <li><a href="/">🏠 Home</a></li>
-                <li><a href="/predict">🎯 Predict</a></li>
-                <li><a href="/dashboard" class="active">📊 Dashboard</a></li>
+                <li><a href="/"> Home</a></li>
+                <li><a href="/predict"> Predict</a></li>
+                <li><a href="/dashboard" class="active"> Dashboard</a></li>
                 {% if current_user.is_authenticated %}
-                    <li><a href="/tracking">📋 Tracking</a></li>
-                    <li><a href="/logout">🚪 Logout</a></li>
+                    <li><a href="/tracking"> Tracking</a></li>
+                    <li><a href="/logout"> Logout</a></li>
                 {% else %}
-                    <li><a href="/login">🔐 Login</a></li>
-                    <li><a href="/signup">📝 Sign Up</a></li>
+                    <li><a href="/login"> Login</a></li>
+                    <li><a href="/signup"> Sign Up</a></li>
                 {% endif %}
             </ul>
         </div>

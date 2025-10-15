@@ -13,18 +13,18 @@
     <nav class="navbar">
         <div class="container">
             <div class="logo">
-                <h1>🧠 InjuryIQ</h1>
+                <h1> InjuryIQ</h1>
             </div>
             <ul class="nav-menu">
-                <li><a href="/" class="active">🏠 Home</a></li>
-                <li><a href="/predict">🎯 Predict</a></li>
-                <li><a href="/dashboard">📊 Dashboard</a></li>
+                <li><a href="/" class="active"> Home</a></li>
+                <li><a href="/predict"> Predict</a></li>
+                <li><a href="/dashboard"> Dashboard</a></li>
                 {% if current_user.is_authenticated %}
-                    <li><a href="/tracking">📋 Tracking</a></li>
-                    <li><a href="/logout">🚪 Logout</a></li>
+                    <li><a href="/tracking"> Tracking</a></li>
+                    <li><a href="/logout"> Logout</a></li>
                 {% else %}
-                    <li><a href="/login">🔐 Login</a></li>
-                    <li><a href="/signup">📝 Sign Up</a></li>
+                    <li><a href="/login"> Login</a></li>
+                    <li><a href="/signup"> Sign Up</a></li>
                 {% endif %}
             </ul>
         </div>
@@ -36,8 +36,8 @@
                 <h1 class="hero-title">Football Injury Recovery Prediction</h1>
                 <p class="hero-subtitle">Advanced Machine Learning for Accurate Recovery Time and Setback Risk Assessment</p>
                 <div class="hero-buttons">
-                    <a href="/predict" class="btn btn-primary">🎯 Make Prediction</a>
-                    <a href="/dashboard" class="btn btn-secondary">📊 View Dashboard</a>
+                    <a href="/predict" class="btn btn-primary"> Make Prediction</a>
+                    <a href="/dashboard" class="btn btn-secondary"> View Dashboard</a>
                 </div>
             </div>
         </div>
@@ -132,7 +132,7 @@
         <div class="container">
             <h2>Ready to Get Started?</h2>
             <p>Make your first injury recovery prediction now</p>
-            <a href="/predict" class="btn btn-primary btn-large">🚀 Start Predicting</a>
+            <a href="/predict" class="btn btn-primary btn-large"> Start Predicting</a>
         </div>
     </section>
 
