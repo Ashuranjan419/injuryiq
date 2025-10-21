@@ -603,41 +603,34 @@ def admin_train_models():
     """Admin endpoint to manually trigger model training"""
     try:
         print("Starting manual model training...")
-        import subprocess
-        result = subprocess.run(['python', 'train_model.py'], 
-                              capture_output=True, 
-                              text=True, 
-                              timeout=600)
+        from train_model import main as train_main
         
-        if result.returncode == 0:
-            # Try to reload models
-            global models, encoders, scaler
-            models = {}
-            if load_models():
-                return jsonify({
-                    'success': True,
-                    'message': 'Models trained and loaded successfully',
-                    'output': result.stdout
-                }), 200
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Training completed but models failed to load',
-                    'output': result.stdout,
-                    'error': result.stderr
-                }), 500
+        # Run training
+        train_main()
+        
+        # Try to reload models
+        global models, encoders, scaler
+        models = {}
+        encoders = None
+        scaler = None
+        
+        if load_models():
+            return jsonify({
+                'success': True,
+                'message': 'Models trained and loaded successfully'
+            }), 200
         else:
             return jsonify({
                 'success': False,
-                'message': 'Model training failed',
-                'output': result.stdout,
-                'error': result.stderr
+                'message': 'Training completed but models failed to load'
             }), 500
             
     except Exception as e:
+        import traceback
         return jsonify({
             'success': False,
-            'message': f'Training error: {str(e)}'
+            'message': f'Training error: {str(e)}',
+            'traceback': traceback.format_exc()
         }), 500
 
 
@@ -673,23 +666,22 @@ if __name__ == '__main__':
         if is_production:
             print("🔄 Attempting to train models automatically...")
             try:
-                import subprocess
-                result = subprocess.run(['python', 'train_model.py'], 
-                                      capture_output=True, 
-                                      text=True, 
-                                      timeout=600)  # 10 minute timeout
-                print(result.stdout)
-                if result.returncode == 0:
-                    print("✅ Model training completed!")
-                    # Try loading models again
-                    models_loaded = load_models()
-                    if not models_loaded:
-                        print("❌ Models still not loading after training")
+                # Import and run training directly instead of subprocess
+                from train_model import main as train_main
+                print("Starting training...")
+                train_main()
+                print("Training completed, attempting to load models...")
+                
+                # Try loading models again
+                models_loaded = load_models()
+                if models_loaded:
+                    print("✅ Models loaded successfully after auto-training!")
                 else:
-                    print(f"❌ Model training failed with code {result.returncode}")
-                    print(result.stderr)
+                    print("❌ Models still not loading after training")
             except Exception as e:
                 print(f"❌ Failed to auto-train models: {e}")
+                import traceback
+                traceback.print_exc()
         
         if not models_loaded:
             print("Please train models first by running: python train_model.py")
