@@ -533,8 +533,20 @@ def health_check():
         'encoders_loaded': False,
         'scaler_loaded': False,
         'database_connected': False,
-        'issues': []
+        'issues': [],
+        'environment': os.environ.get('RENDER', 'local'),
+        'model_path_exists': os.path.exists(MODEL_PATH),
+        'model_files': []
     }
+    
+    # Check if model directory exists and list files
+    if os.path.exists(MODEL_PATH):
+        try:
+            status['model_files'] = os.listdir(MODEL_PATH)
+        except Exception as e:
+            status['issues'].append(f'Cannot list model directory: {str(e)}')
+    else:
+        status['issues'].append(f'Model directory does not exist: {MODEL_PATH}')
     
     # Check models
     required_models = ['rf_recovery', 'xgb_recovery', 'rf_setback', 'xgb_setback']
@@ -542,6 +554,9 @@ def health_check():
         status['models_loaded'] = True
     else:
         status['issues'].append('Models not loaded')
+        missing = [m for m in required_models if m not in models]
+        if missing:
+            status['missing_models'] = missing
     
     # Check encoders
     if encoders is not None and isinstance(encoders, dict):
@@ -569,6 +584,12 @@ def health_check():
     except Exception as e:
         status['issues'].append(f'Database error: {str(e)}')
     
+    # Check if data file exists
+    data_file = 'data/injury_data.csv'
+    status['data_file_exists'] = os.path.exists(data_file)
+    if not status['data_file_exists']:
+        status['issues'].append(f'Data file not found: {data_file}')
+    
     # Determine overall status
     if status['issues']:
         status['status'] = 'unhealthy'
@@ -577,16 +598,65 @@ def health_check():
     return jsonify(status), 200
 
 
+@app.route('/api/admin/train-models', methods=['POST'])
+def admin_train_models():
+    """Admin endpoint to manually trigger model training"""
+    try:
+        print("Starting manual model training...")
+        import subprocess
+        result = subprocess.run(['python', 'train_model.py'], 
+                              capture_output=True, 
+                              text=True, 
+                              timeout=600)
+        
+        if result.returncode == 0:
+            # Try to reload models
+            global models, encoders, scaler
+            models = {}
+            if load_models():
+                return jsonify({
+                    'success': True,
+                    'message': 'Models trained and loaded successfully',
+                    'output': result.stdout
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Training completed but models failed to load',
+                    'output': result.stdout,
+                    'error': result.stderr
+                }), 500
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Model training failed',
+                'output': result.stdout,
+                'error': result.stderr
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Training error: {str(e)}'
+        }), 500
+
+
 @app.errorhandler(404)
 def not_found(error):
     """404 error handler"""
-    return render_template('404.html'), 404
+    try:
+        return render_template('404.html'), 404
+    except:
+        return jsonify({'error': 'Page not found'}), 404
 
 
 @app.errorhandler(500)
 def internal_error(error):
     """500 error handler"""
-    return render_template('500.html'), 500
+    try:
+        return render_template('500.html'), 500
+    except:
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 if __name__ == '__main__':
@@ -596,15 +666,38 @@ if __name__ == '__main__':
     if not models_loaded:
         print("\n" + "=" * 60)
         print("⚠️  WARNING: Models not found!")
-        print("Please train models first by running: python train_model.py")
-        print("The server will start but prediction endpoints will not work.")
         print("=" * 60 + "\n")
         
-        # In production, don't exit - let the server start
-        # This allows checking the health endpoint
+        # On Render or production, try to train models automatically
         is_production = os.environ.get('RENDER', False) or os.environ.get('PRODUCTION', False)
-        if not is_production:
-            exit(1)
+        if is_production:
+            print("🔄 Attempting to train models automatically...")
+            try:
+                import subprocess
+                result = subprocess.run(['python', 'train_model.py'], 
+                                      capture_output=True, 
+                                      text=True, 
+                                      timeout=600)  # 10 minute timeout
+                print(result.stdout)
+                if result.returncode == 0:
+                    print("✅ Model training completed!")
+                    # Try loading models again
+                    models_loaded = load_models()
+                    if not models_loaded:
+                        print("❌ Models still not loading after training")
+                else:
+                    print(f"❌ Model training failed with code {result.returncode}")
+                    print(result.stderr)
+            except Exception as e:
+                print(f"❌ Failed to auto-train models: {e}")
+        
+        if not models_loaded:
+            print("Please train models first by running: python train_model.py")
+            print("The server will start but prediction endpoints will not work.")
+            print("=" * 60 + "\n")
+            
+            if not is_production:
+                exit(1)
     
     # Test MongoDB connection
     try:
