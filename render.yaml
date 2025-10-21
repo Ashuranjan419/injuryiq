@@ -7,8 +7,11 @@ services:
     plan: free
     buildCommand: chmod +x build.sh && ./build.sh
     startCommand: gunicorn app:app
+    envVars:
       - key: FLASK_DEBUG
         value: False
+      - key: RENDER
+        value: True
       - key: SECRET_KEY
         sync: false
       - key: MONGO_URI

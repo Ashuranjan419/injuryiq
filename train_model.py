@@ -6,12 +6,18 @@ import pandas as pd
 import numpy as np
 import joblib
 import os
+import sys
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, classification_report
 from xgboost import XGBRegressor, XGBClassifier
+
+# Configure matplotlib for headless environments (Render deployment)
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from utils.data_preprocessing import load_data, preprocess_data
 
 
@@ -141,38 +147,53 @@ def train_setback_models(X, y):
 
 def plot_feature_importance(model, feature_names, model_name, save_path='models/'):
     """Plot and save feature importance"""
-    importance = model.feature_importances_
-    indices = np.argsort(importance)[::-1]
-    
-    plt.figure(figsize=(10, 6))
-    plt.title(f'Feature Importance - {model_name}')
-    plt.bar(range(len(importance)), importance[indices])
-    plt.xticks(range(len(importance)), [feature_names[i] for i in indices], rotation=45)
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_path, f'{model_name}_feature_importance.png'))
-    plt.close()
+    try:
+        importance = model.feature_importances_
+        indices = np.argsort(importance)[::-1]
+        
+        plt.figure(figsize=(10, 6))
+        plt.title(f'Feature Importance - {model_name}')
+        plt.bar(range(len(importance)), importance[indices])
+        plt.xticks(range(len(importance)), [feature_names[i] for i in indices], rotation=45)
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_path, f'{model_name}_feature_importance.png'))
+        plt.close()
+        print(f"✓ Saved feature importance plot: {model_name}")
+    except Exception as e:
+        print(f"⚠ Warning: Could not create plot for {model_name}: {e}")
 
 
 def save_models(recovery_results, setback_results, encoders, scaler, save_path='models/'):
     """Save trained models and preprocessing objects"""
     if not os.path.exists(save_path):
         os.makedirs(save_path)
+        print(f"✓ Created directory: {save_path}")
     
     # Save recovery models
+    print("Saving models...")
     joblib.dump(recovery_results['rf_model'], 
                 os.path.join(save_path, 'rf_recovery_model.pkl'))
+    print("  ✓ Random Forest recovery model")
+    
     joblib.dump(recovery_results['xgb_model'], 
                 os.path.join(save_path, 'xgb_recovery_model.pkl'))
+    print("  ✓ XGBoost recovery model")
     
     # Save setback models
     joblib.dump(setback_results['rf_model'], 
                 os.path.join(save_path, 'rf_setback_model.pkl'))
+    print("  ✓ Random Forest setback model")
+    
     joblib.dump(setback_results['xgb_model'], 
                 os.path.join(save_path, 'xgb_setback_model.pkl'))
+    print("  ✓ XGBoost setback model")
     
     # Save preprocessing objects
     joblib.dump(encoders, os.path.join(save_path, 'encoders.pkl'))
+    print("  ✓ Encoders")
+    
     joblib.dump(scaler, os.path.join(save_path, 'scaler.pkl'))
+    print("  ✓ Scaler")
     
     # Save metrics
     metrics = {
@@ -188,8 +209,9 @@ def save_models(recovery_results, setback_results, encoders, scaler, save_path='
         }
     }
     joblib.dump(metrics, os.path.join(save_path, 'model_metrics.pkl'))
+    print("  ✓ Model metrics")
     
-    print(f"\nModels saved to {save_path}")
+    print(f"\n✅ All models saved to {save_path}")
 
 
 def main():
@@ -198,50 +220,62 @@ def main():
     print("INJURY RECOVERY PREDICTION - MODEL TRAINING")
     print("=" * 60)
     
-    # Load data
-    print("\nLoading injury data...")
-    df = load_data('data/injury_data.csv')
-    
-    if df is None:
-        print("Failed to load data. Exiting.")
-        return
-    
-    print(f"Loaded {len(df)} injury records")
-    
-    # Preprocess data
-    print("\nPreprocessing data...")
-    X, y_recovery, y_setback, encoders, scaler = preprocess_data(df)
-    
-    # Train recovery prediction models
-    print("\n" + "=" * 60)
-    print("TRAINING RECOVERY TIME PREDICTION MODELS")
-    print("=" * 60)
-    recovery_results = train_recovery_models(X, y_recovery)
-    
-    # Train setback prediction models
-    print("\n" + "=" * 60)
-    print("TRAINING SETBACK RISK PREDICTION MODELS")
-    print("=" * 60)
-    setback_results = train_setback_models(X, y_setback)
-    
-    # Plot feature importance
-    print("\nGenerating feature importance plots...")
-    feature_names = X.columns.tolist()
-    plot_feature_importance(recovery_results['rf_model'], feature_names, 
-                          'RF_Recovery')
-    plot_feature_importance(recovery_results['xgb_model'], feature_names, 
-                          'XGB_Recovery')
-    plot_feature_importance(setback_results['rf_model'], feature_names, 
-                          'RF_Setback')
-    plot_feature_importance(setback_results['xgb_model'], feature_names, 
-                          'XGB_Setback')
-    
-    # Save models
-    save_models(recovery_results, setback_results, encoders, scaler)
-    
-    print("\n" + "=" * 60)
-    print("TRAINING COMPLETED SUCCESSFULLY!")
-    print("=" * 60)
+    try:
+        # Load data
+        print("\nLoading injury data...")
+        df = load_data('data/injury_data.csv')
+        
+        if df is None:
+            print("❌ Failed to load data. Exiting.")
+            sys.exit(1)
+        
+        print(f"✓ Loaded {len(df)} injury records")
+        
+        # Preprocess data
+        print("\nPreprocessing data...")
+        X, y_recovery, y_setback, encoders, scaler = preprocess_data(df)
+        print(f"✓ Preprocessed data: {X.shape[0]} samples, {X.shape[1]} features")
+        
+        # Train recovery prediction models
+        print("\n" + "=" * 60)
+        print("TRAINING RECOVERY TIME PREDICTION MODELS")
+        print("=" * 60)
+        recovery_results = train_recovery_models(X, y_recovery)
+        
+        # Train setback prediction models
+        print("\n" + "=" * 60)
+        print("TRAINING SETBACK RISK PREDICTION MODELS")
+        print("=" * 60)
+        setback_results = train_setback_models(X, y_setback)
+        
+        # Plot feature importance (optional - won't fail if plotting fails)
+        print("\nGenerating feature importance plots...")
+        feature_names = X.columns.tolist()
+        plot_feature_importance(recovery_results['rf_model'], feature_names, 
+                              'RF_Recovery')
+        plot_feature_importance(recovery_results['xgb_model'], feature_names, 
+                              'XGB_Recovery')
+        plot_feature_importance(setback_results['rf_model'], feature_names, 
+                              'RF_Setback')
+        plot_feature_importance(setback_results['xgb_model'], feature_names, 
+                              'XGB_Setback')
+        
+        # Save models
+        save_models(recovery_results, setback_results, encoders, scaler)
+        
+        print("\n" + "=" * 60)
+        print("✅ TRAINING COMPLETED SUCCESSFULLY!")
+        print("=" * 60)
+        sys.exit(0)
+        
+    except Exception as e:
+        print("\n" + "=" * 60)
+        print("❌ ERROR DURING TRAINING")
+        print("=" * 60)
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
