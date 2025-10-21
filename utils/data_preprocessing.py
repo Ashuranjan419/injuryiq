@@ -72,6 +72,27 @@ def encode_new_input(input_data, encoders):
     Returns:
         Encoded feature array
     """
+    # Validate encoders
+    if encoders is None:
+        raise ValueError("Encoders not initialized")
+    
+    # Check if required encoders exist
+    required_encoders = ['position', 'injury_type', 'injury_severity']
+    for encoder_name in required_encoders:
+        if encoder_name not in encoders:
+            raise ValueError(f"Missing encoder: {encoder_name}")
+    
+    # Validate input values against encoder classes
+    try:
+        if input_data['position'] not in encoders['position'].classes_:
+            raise ValueError(f"Unknown position: {input_data['position']}")
+        if input_data['injury_type'] not in encoders['injury_type'].classes_:
+            raise ValueError(f"Unknown injury type: {input_data['injury_type']}")
+        if input_data['injury_severity'] not in encoders['injury_severity'].classes_:
+            raise ValueError(f"Unknown injury severity: {input_data['injury_severity']}")
+    except KeyError as e:
+        raise ValueError(f"Missing input field: {e}")
+    
     encoded_data = {
         'age': input_data['age'],
         'position_encoded': encoders['position'].transform([input_data['position']])[0],

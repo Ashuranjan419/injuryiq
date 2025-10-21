@@ -61,17 +61,71 @@ def load_models():
     global models, encoders, scaler
     
     try:
+        # Check if model directory exists
+        if not os.path.exists(MODEL_PATH):
+            print(f"Error: Model directory '{MODEL_PATH}' not found")
+            return False
+        
+        # Check if all required files exist
+        required_files = [
+            'rf_recovery_model.pkl',
+            'xgb_recovery_model.pkl',
+            'rf_setback_model.pkl',
+            'xgb_setback_model.pkl',
+            'encoders.pkl',
+            'scaler.pkl'
+        ]
+        
+        missing_files = []
+        for file in required_files:
+            file_path = os.path.join(MODEL_PATH, file)
+            if not os.path.exists(file_path):
+                missing_files.append(file)
+        
+        if missing_files:
+            print(f"Error: Missing model files: {', '.join(missing_files)}")
+            return False
+        
+        # Load models
+        print("Loading models...")
         models['rf_recovery'] = joblib.load(os.path.join(MODEL_PATH, 'rf_recovery_model.pkl'))
+        print("✓ Random Forest recovery model loaded")
+        
         models['xgb_recovery'] = joblib.load(os.path.join(MODEL_PATH, 'xgb_recovery_model.pkl'))
+        print("✓ XGBoost recovery model loaded")
+        
         models['rf_setback'] = joblib.load(os.path.join(MODEL_PATH, 'rf_setback_model.pkl'))
+        print("✓ Random Forest setback model loaded")
+        
         models['xgb_setback'] = joblib.load(os.path.join(MODEL_PATH, 'xgb_setback_model.pkl'))
+        print("✓ XGBoost setback model loaded")
+        
         encoders = joblib.load(os.path.join(MODEL_PATH, 'encoders.pkl'))
+        print("✓ Encoders loaded")
+        
         scaler = joblib.load(os.path.join(MODEL_PATH, 'scaler.pkl'))
-        print("Models loaded successfully!")
+        print("✓ Scaler loaded")
+        
+        # Validate loaded objects
+        if encoders is None or not isinstance(encoders, dict):
+            print("Error: Encoders not properly loaded")
+            return False
+        
+        required_encoders = ['position', 'injury_type', 'injury_severity']
+        for encoder_name in required_encoders:
+            if encoder_name not in encoders:
+                print(f"Error: Missing encoder: {encoder_name}")
+                return False
+        
+        print("✅ All models loaded successfully!")
         return True
+        
     except Exception as e:
-        print(f"Error loading models: {e}")
-        print("Please train models first by running: python train_model.py")
+        print(f"❌ Error loading models: {e}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        print("\nPlease train models first by running: python train_model.py")
         return False
 
 
@@ -224,6 +278,13 @@ def dashboard():
 def predict():
     """API endpoint for injury recovery prediction"""
     try:
+        # Check if models are loaded
+        if not models or encoders is None or scaler is None:
+            return jsonify({
+                'error': 'Models not loaded. Please contact administrator.',
+                'success': False
+            }), 503
+        
         # Get input data
         data = request.get_json()
         
@@ -455,10 +516,65 @@ def update_notes(player_id):
 def get_positions():
     """Get list of available positions"""
     try:
+        if encoders is None or 'position' not in encoders:
+            return jsonify({'error': 'Encoders not loaded', 'success': False}), 503
         positions = list(encoders['position'].classes_)
         return jsonify({'success': True, 'positions': positions}), 200
     except Exception as e:
         return jsonify({'error': str(e), 'success': False}), 500
+
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint to verify system status"""
+    status = {
+        'status': 'healthy',
+        'models_loaded': False,
+        'encoders_loaded': False,
+        'scaler_loaded': False,
+        'database_connected': False,
+        'issues': []
+    }
+    
+    # Check models
+    required_models = ['rf_recovery', 'xgb_recovery', 'rf_setback', 'xgb_setback']
+    if models and all(model_name in models for model_name in required_models):
+        status['models_loaded'] = True
+    else:
+        status['issues'].append('Models not loaded')
+    
+    # Check encoders
+    if encoders is not None and isinstance(encoders, dict):
+        required_encoders = ['position', 'injury_type', 'injury_severity']
+        if all(enc in encoders for enc in required_encoders):
+            status['encoders_loaded'] = True
+            status['available_positions'] = list(encoders['position'].classes_)
+            status['available_injury_types'] = list(encoders['injury_type'].classes_)
+            status['available_severities'] = list(encoders['injury_severity'].classes_)
+        else:
+            status['issues'].append('Encoders incomplete')
+    else:
+        status['issues'].append('Encoders not loaded')
+    
+    # Check scaler
+    if scaler is not None:
+        status['scaler_loaded'] = True
+    else:
+        status['issues'].append('Scaler not loaded')
+    
+    # Check database
+    try:
+        mongo.db.command('ping')
+        status['database_connected'] = True
+    except Exception as e:
+        status['issues'].append(f'Database error: {str(e)}')
+    
+    # Determine overall status
+    if status['issues']:
+        status['status'] = 'unhealthy'
+        return jsonify(status), 503
+    
+    return jsonify(status), 200
 
 
 @app.errorhandler(404)
@@ -479,10 +595,16 @@ if __name__ == '__main__':
     
     if not models_loaded:
         print("\n" + "=" * 60)
-        print("WARNING: Models not found!")
+        print("⚠️  WARNING: Models not found!")
         print("Please train models first by running: python train_model.py")
+        print("The server will start but prediction endpoints will not work.")
         print("=" * 60 + "\n")
-        exit(1)
+        
+        # In production, don't exit - let the server start
+        # This allows checking the health endpoint
+        is_production = os.environ.get('RENDER', False) or os.environ.get('PRODUCTION', False)
+        if not is_production:
+            exit(1)
     
     # Test MongoDB connection
     try:
