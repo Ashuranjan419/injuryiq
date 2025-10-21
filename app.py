@@ -38,6 +38,9 @@ models = {}
 encoders = None
 scaler = None
 
+# Flag to track if we've attempted to load/train models
+_models_initialized = False
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -54,6 +57,47 @@ def load_user(user_id):
         # Catch any other unexpected errors
         print(f"Error loading user: {e}")
     return None
+
+
+def initialize_models():
+    """Initialize models - load or train if necessary"""
+    global _models_initialized, models, encoders, scaler
+    
+    if _models_initialized:
+        return True
+    
+    print("Initializing models...")
+    _models_initialized = True
+    
+    # Try to load existing models
+    if load_models():
+        print("✅ Models loaded from disk")
+        return True
+    
+    # If loading failed, try to train
+    print("⚠️  Models not found, attempting to train...")
+    is_production = os.environ.get('RENDER', False) or os.environ.get('PRODUCTION', False)
+    
+    if is_production or True:  # Always try to train if models are missing
+        try:
+            from train_model import main as train_main
+            print("🔄 Starting model training...")
+            train_main()
+            print("Training completed, loading models...")
+            
+            if load_models():
+                print("✅ Models trained and loaded successfully!")
+                return True
+            else:
+                print("❌ Models still not loading after training")
+                return False
+        except Exception as e:
+            print(f"❌ Failed to train models: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    return False
 
 
 def load_models():
@@ -246,6 +290,12 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
+
+
+@app.before_request
+def ensure_models_loaded():
+    """Ensure models are loaded before handling any request"""
+    initialize_models()
 
 
 @app.route('/')
@@ -653,43 +703,8 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
-    # Load models
-    models_loaded = load_models()
-    
-    if not models_loaded:
-        print("\n" + "=" * 60)
-        print("⚠️  WARNING: Models not found!")
-        print("=" * 60 + "\n")
-        
-        # On Render or production, try to train models automatically
-        is_production = os.environ.get('RENDER', False) or os.environ.get('PRODUCTION', False)
-        if is_production:
-            print("🔄 Attempting to train models automatically...")
-            try:
-                # Import and run training directly instead of subprocess
-                from train_model import main as train_main
-                print("Starting training...")
-                train_main()
-                print("Training completed, attempting to load models...")
-                
-                # Try loading models again
-                models_loaded = load_models()
-                if models_loaded:
-                    print("✅ Models loaded successfully after auto-training!")
-                else:
-                    print("❌ Models still not loading after training")
-            except Exception as e:
-                print(f"❌ Failed to auto-train models: {e}")
-                import traceback
-                traceback.print_exc()
-        
-        if not models_loaded:
-            print("Please train models first by running: python train_model.py")
-            print("The server will start but prediction endpoints will not work.")
-            print("=" * 60 + "\n")
-            
-            if not is_production:
-                exit(1)
+    # Initialize models
+    initialize_models()
     
     # Test MongoDB connection
     try:
