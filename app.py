@@ -377,6 +377,10 @@ def predict():
         else:
             return jsonify({'error': 'Invalid model type'}), 400
         
+        # Convert numpy types to native Python types for JSON serialization
+        recovery_days = float(recovery_days)
+        setback_prob = float(setback_prob)
+        
         # Determine setback risk level
         if setback_prob < 0.3:
             risk_level = 'Low'
