@@ -370,8 +370,10 @@ def predict():
             recovery_days = models['rf_recovery'].predict(scaled_input)[0]
             setback_prob = models['rf_setback'].predict_proba(scaled_input)[0][1]
         elif model_type == 'xgboost':
-            recovery_days = models['xgb_recovery'].predict(scaled_input)[0]
-            setback_prob = models['xgb_setback'].predict_proba(scaled_input)[0][1]
+            # Convert to float32 for XGBoost compatibility
+            scaled_input_xgb = scaled_input.astype(np.float32)
+            recovery_days = models['xgb_recovery'].predict(scaled_input_xgb)[0]
+            setback_prob = models['xgb_setback'].predict_proba(scaled_input_xgb)[0][1]
         else:
             return jsonify({'error': 'Invalid model type'}), 400
         

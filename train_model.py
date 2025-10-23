@@ -32,10 +32,15 @@ def train_recovery_models(X, y):
     Returns:
         Dictionary with trained models and metrics
     """
-    # Split data
+    # Split data - ensure float32 for XGBoost compatibility
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
+    
+    # Convert to float32 for XGBoost
+    X_train_xgb = X_train.astype(np.float32)
+    X_test_xgb = X_test.astype(np.float32)
+    y_train_xgb = y_train.astype(np.float32)
     
     print("Training Random Forest for recovery prediction...")
     rf_model = RandomForestRegressor(
@@ -52,10 +57,12 @@ def train_recovery_models(X, y):
         n_estimators=100,
         max_depth=6,
         learning_rate=0.1,
-        random_state=42
+        random_state=42,
+        tree_method='hist',  # More stable for deployment
+        enable_categorical=False
     )
-    xgb_model.fit(X_train, y_train)
-    xgb_pred = xgb_model.predict(X_test)
+    xgb_model.fit(X_train_xgb, y_train_xgb)
+    xgb_pred = xgb_model.predict(X_test_xgb)
     
     # Calculate metrics
     rf_rmse = np.sqrt(mean_squared_error(y_test, rf_pred))
@@ -90,10 +97,14 @@ def train_setback_models(X, y):
     Returns:
         Dictionary with trained models and metrics
     """
-    # Split data
+    # Split data - ensure float32 for XGBoost compatibility
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
+    
+    # Convert to float32 for XGBoost
+    X_train_xgb = X_train.astype(np.float32)
+    X_test_xgb = X_test.astype(np.float32)
     
     print("\nTraining Random Forest for setback prediction...")
     rf_model = RandomForestClassifier(
@@ -111,11 +122,13 @@ def train_setback_models(X, y):
         n_estimators=100,
         max_depth=6,
         learning_rate=0.1,
-        random_state=42
+        random_state=42,
+        tree_method='hist',  # More stable for deployment
+        enable_categorical=False
     )
-    xgb_model.fit(X_train, y_train)
-    xgb_pred = xgb_model.predict(X_test)
-    xgb_proba = xgb_model.predict_proba(X_test)
+    xgb_model.fit(X_train_xgb, y_train)
+    xgb_pred = xgb_model.predict(X_test_xgb)
+    xgb_proba = xgb_model.predict_proba(X_test_xgb)
     
     # Calculate metrics
     rf_accuracy = accuracy_score(y_test, rf_pred)
@@ -211,7 +224,7 @@ def save_models(recovery_results, setback_results, encoders, scaler, save_path='
     joblib.dump(metrics, os.path.join(save_path, 'model_metrics.pkl'))
     print("  ✓ Model metrics")
     
-    print(f"\n✅ All models saved to {save_path}")
+    print(f"\n All models saved to {save_path}")
 
 
 def main():
@@ -226,7 +239,7 @@ def main():
         df = load_data('data/injury_data.csv')
         
         if df is None:
-            print("❌ Failed to load data. Exiting.")
+            print(" Failed to load data. Exiting.")
             sys.exit(1)
         
         print(f"✓ Loaded {len(df)} injury records")
@@ -264,13 +277,13 @@ def main():
         save_models(recovery_results, setback_results, encoders, scaler)
         
         print("\n" + "=" * 60)
-        print("✅ TRAINING COMPLETED SUCCESSFULLY!")
+        print(" TRAINING COMPLETED SUCCESSFULLY!")
         print("=" * 60)
         sys.exit(0)
         
     except Exception as e:
         print("\n" + "=" * 60)
-        print("❌ ERROR DURING TRAINING")
+        print(" ERROR DURING TRAINING")
         print("=" * 60)
         print(f"Error: {e}")
         import traceback

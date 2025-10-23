@@ -3,6 +3,7 @@ Quick test script to verify models work correctly
 """
 import joblib
 import os
+import numpy as np
 
 def test_models():
     """Test if models can be loaded and used"""
@@ -14,24 +15,24 @@ def test_models():
         # Load models
         print("Loading encoders...")
         encoders = joblib.load(os.path.join(MODEL_PATH, 'encoders.pkl'))
-        print(f"✓ Encoders loaded: {list(encoders.keys())}")
+        print(f" Encoders loaded: {list(encoders.keys())}")
         
         print("\nLoading scaler...")
         scaler = joblib.load(os.path.join(MODEL_PATH, 'scaler.pkl'))
-        print("✓ Scaler loaded")
+        print(" Scaler loaded")
         
         print("\nLoading models...")
         rf_recovery = joblib.load(os.path.join(MODEL_PATH, 'rf_recovery_model.pkl'))
-        print("✓ Random Forest recovery model loaded")
+        print(" Random Forest recovery model loaded")
         
         xgb_recovery = joblib.load(os.path.join(MODEL_PATH, 'xgb_recovery_model.pkl'))
-        print("✓ XGBoost recovery model loaded")
+        print(" XGBoost recovery model loaded")
         
         rf_setback = joblib.load(os.path.join(MODEL_PATH, 'rf_setback_model.pkl'))
-        print("✓ Random Forest setback model loaded")
+        print(" Random Forest setback model loaded")
         
         xgb_setback = joblib.load(os.path.join(MODEL_PATH, 'xgb_setback_model.pkl'))
-        print("✓ XGBoost setback model loaded")
+        print(" XGBoost setback model loaded")
         
         # Check encoder classes
         print("\n" + "="*50)
@@ -70,22 +71,31 @@ def test_models():
         # Scale
         scaled = scaler.transform([encoded])
         
-        # Predict
-        recovery_days = rf_recovery.predict(scaled)[0]
-        setback_prob = rf_setback.predict_proba(scaled)[0][1]
+        # Predict with Random Forest
+        recovery_days_rf = rf_recovery.predict(scaled)[0]
+        setback_prob_rf = rf_setback.predict_proba(scaled)[0][1]
         
-        print(f"\n✅ Prediction successful!")
-        print(f"Recovery Days: {recovery_days:.1f}")
-        print(f"Setback Probability: {setback_prob*100:.1f}%")
+        print(f"\n Random Forest Prediction successful!")
+        print(f"Recovery Days: {recovery_days_rf:.1f}")
+        print(f"Setback Probability: {setback_prob_rf*100:.1f}%")
+        
+        # Predict with XGBoost (convert to float32)
+        scaled_xgb = scaled.astype(np.float32)
+        recovery_days_xgb = xgb_recovery.predict(scaled_xgb)[0]
+        setback_prob_xgb = xgb_setback.predict_proba(scaled_xgb)[0][1]
+        
+        print(f"\n XGBoost Prediction successful!")
+        print(f"Recovery Days: {recovery_days_xgb:.1f}")
+        print(f"Setback Probability: {setback_prob_xgb*100:.1f}%")
         
         print("\n" + "="*50)
-        print("✅ ALL TESTS PASSED!")
+        print(" ALL TESTS PASSED!")
         print("="*50)
         
         return True
         
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n Error: {e}")
         import traceback
         traceback.print_exc()
         return False
