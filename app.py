@@ -507,21 +507,6 @@ def delete_tracked_player(player_id):
     except Exception as e:
         print(f"Error deleting player: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
-    """Delete a tracked player"""
-    try:
-        player = TrackedPlayer.query.filter_by(id=player_id, user_id=current_user.id).first()
-        
-        if not player:
-            return jsonify({'error': 'Player not found', 'success': False}), 404
-        
-        db.session.delete(player)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Player removed from tracking'}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e), 'success': False}), 500
 
 
 @app.route('/api/tracking/<player_id>/recover', methods=['PUT'])

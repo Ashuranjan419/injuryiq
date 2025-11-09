@@ -106,10 +106,18 @@ function displayPlayers(players) {
     
     playersGrid.innerHTML = players.map(player => createPlayerCard(player)).join('');
     
-    // Add event listeners
+    // Add event listeners after DOM elements are created
     players.forEach(player => {
-        document.getElementById(`delete-${player.id}`).addEventListener('click', () => deletePlayer(player.id));
-        document.getElementById(`recover-${player.id}`).addEventListener('click', () => markAsRecovered(player.id));
+        const deleteBtn = document.getElementById(`delete-${player.id}`);
+        const recoverBtn = document.getElementById(`recover-${player.id}`);
+        
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => deletePlayer(player.id));
+        }
+        
+        if (recoverBtn) {
+            recoverBtn.addEventListener('click', () => markAsRecovered(player.id));
+        }
     });
 }
 
